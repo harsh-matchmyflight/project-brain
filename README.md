@@ -32,7 +32,7 @@ Then:
 1. **Restart Claude Code.** Skills load at session start — a mid-session install won't appear until you do.
 2. Install the language server that powers impact analysis: `/plugin install typescript-lsp@claude-plugins-official`
 3. In the agent, say: **`onboard this project`**
-4. Mark `brain-verify` a **required** status check in branch protection. (See [Enforcement](#enforcement-is-layered-and-the-layers-are-not-equal) — this is the step people skip, and it's the one that matters.)
+4. Mark **`verify`** a **required** status check in branch protection. (See [Enforcement](#enforcement-is-layered-and-the-layers-are-not-equal) — this is the step people skip, and it's the one that matters.)
 
 Onboarding reads the codebase once and writes `.brain/`. Budget a few minutes on a large repo. **For a monorepo, onboard per package** rather than all at once — see [Limits](#honest-limits).
 
@@ -148,7 +148,9 @@ See [docs/PORTABILITY.md](docs/PORTABILITY.md) for per-agent wiring beyond Claud
 
 Setting `core.hooksPath=.githooks` (which the installer does) fixes the most common silent failure — hooks living in `.git/hooks` never survive a fresh clone. But be clear-eyed: the local hook is fast feedback, not control.
 
-**Making `brain-verify` required:** repo → Settings → Branches → Add branch ruleset → Require status checks to pass → select `brain-verify`. Until you do this, an agent that runs `git commit --no-verify` faces nothing at all.
+**Making the check required:** repo → Settings → Branches → Add branch ruleset → Require status checks to pass → select **`verify`**.
+
+> ⚠️ The check is named **`verify`** (the workflow's *job*), not `brain-verify` (the *workflow*). Searching for `brain-verify` in the picker finds nothing. Until you do this, an agent that runs `git commit --no-verify` faces nothing at all.
 
 `BRAIN_OVERRIDE=1 git commit` is the documented escape hatch when you legitimately need past the local hook.
 

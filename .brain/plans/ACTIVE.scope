@@ -1,0 +1,10 @@
+# plan: fix-landmines
+skills/brain-refresh/SKILL.md
+skills/brain-onboard/SKILL.md
+bin/selftest.sh
+bin/install-gate.sh
+install.sh
+README.md
+templates/pre-commit
+.githooks/*
+.brain/*

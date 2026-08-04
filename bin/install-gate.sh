@@ -52,7 +52,8 @@ if [ "$WITH_CI" -eq 1 ]; then
   cp "$PLUGIN_ROOT/templates/brain-verify.yml" "$ROOT/.github/workflows/brain-verify.yml"
   install -m 0755 "$PLUGIN_ROOT/templates/check-features.py" "$ROOT/.github/scripts/check-features.py"
   echo "installed: .github/workflows/brain-verify.yml + .github/scripts/check-features.py"
-  echo "  ACTION REQUIRED: make 'brain-verify' a required status check in branch protection."
+  echo "  ACTION REQUIRED: make 'verify' a required status check in branch protection."
+  echo "  ('verify' is the JOB name — 'brain-verify' is the workflow and will not appear there.)"
   echo "  Local hooks are bypassable; the required check is the gate that actually holds."
 fi
 

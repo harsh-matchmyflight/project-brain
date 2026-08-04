@@ -39,13 +39,34 @@ for ev,groups in h.items():
 PY
 
 echo "== CI workflow =="
-python3 -c "import yaml,sys;yaml.safe_load(open('$ROOT/templates/brain-verify.yml'))" 2>/dev/null \
-  && ok "brain-verify.yml is valid YAML" \
-  || bad "brain-verify.yml is invalid YAML (or pyyaml missing)"
+if python3 -c "import yaml" 2>/dev/null; then
+  python3 -c "import yaml;yaml.safe_load(open('$ROOT/templates/brain-verify.yml'))" 2>/dev/null \
+    && ok "brain-verify.yml is valid YAML" \
+    || bad "brain-verify.yml is invalid YAML"
+else
+  # Distinguish a missing dependency from a broken file. Conflating them sends you
+  # looking for a YAML bug that isn't there.
+  bad "cannot check brain-verify.yml — pyyaml not installed (pip3 install --user pyyaml)"
+fi
 python3 -m py_compile "$ROOT/templates/check-features.py" 2>/dev/null \
   && ok "check-features.py compiles" || bad "check-features.py syntax error"
+# Must exit non-zero on unusable input. Both branches used to call ok(), so this
+# assertion could never fail regardless of behaviour.
 python3 "$ROOT/templates/check-features.py" /dev/null /dev/null >/dev/null 2>&1
-[ $? -ne 0 ] && ok "check-features.py handles bad input without crashing hard" || ok "check-features.py ran"
+[ $? -ne 0 ] && ok "check-features.py rejects bad input" \
+             || bad "check-features.py accepted empty input — should exit non-zero"
+
+echo "== template/installed drift =="
+# install-gate.sh copies these; nothing else detects them diverging. A template edited
+# without re-running the installer leaves the live gate on stale logic.
+drift() {
+  if [ ! -f "$ROOT/$2" ]; then ok "$2 not installed here (skipped)"; return; fi
+  cmp -s "$ROOT/$1" "$ROOT/$2" && ok "$2 matches $1" || bad "$2 has DRIFTED from $1"
+}
+drift templates/pre-commit        .githooks/pre-commit
+drift templates/pre-commit        .githooks/pre-merge-commit
+drift templates/brain-verify.yml  .github/workflows/brain-verify.yml
+drift templates/check-features.py .github/scripts/check-features.py
 
 echo "== shell syntax =="
 for f in hooks/*.sh bin/*.sh install.sh templates/pre-commit; do

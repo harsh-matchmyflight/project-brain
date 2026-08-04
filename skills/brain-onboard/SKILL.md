@@ -234,7 +234,7 @@ That installs `.githooks/pre-commit` and `.githooks/pre-merge-commit`, sets `cor
 
 1. `AGENTS.md` / `CLAUDE.md` rules — advisory. Agents follow them most of the time.
 2. `.githooks/pre-commit` — blocks local commits. Bypassable with `--no-verify`, `-n`, `git -c core.hooksPath=…`, or `SKIP=`. Does not fire on rebase or cherry-pick. Cannot exist for commits created through a hosting API or a web-UI squash merge.
-3. **The CI required status check — the only layer that survives all of the above.** Installing the workflow is not enough; they must mark `brain-verify` as required in branch protection or a ruleset. Say this explicitly. It is the single most important sentence in the whole onboarding.
+3. **The CI required status check — the only layer that survives all of the above.** Installing the workflow is not enough; they must mark **`verify`** as required in branch protection (that is the workflow's *job* name — `brain-verify` is the workflow name and does not appear in the picker) or a ruleset. Say this explicitly. It is the single most important sentence in the whole onboarding.
 
 Do not overstate layer 2. Presenting a bypassable hook as a guarantee is worse than having no hook, because it buys false confidence.
 

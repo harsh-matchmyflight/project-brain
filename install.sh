@@ -84,9 +84,14 @@ if [ "$SKIP_GATE" -eq 0 ]; then
     if [ "$ROOT" = "$SRC_DIR" ]; then
       tip "inside project-brain itself — skipping gate install"
     else
-      bash "$SRC_DIR/bin/install-gate.sh" --with-ci --claude-settings >/dev/null 2>&1 \
-        && ok "gate installed in $(basename "$ROOT") (.githooks + CI workflow)" \
-        || no "gate install failed — run bin/install-gate.sh directly to see why"
+      if GATE_OUT="$(bash "$SRC_DIR/bin/install-gate.sh" --with-ci --claude-settings 2>&1)"; then
+        ok "gate installed in $(basename "$ROOT") (.githooks + CI workflow)"
+        # Surface the ACTION REQUIRED lines — swallowing them hid the single most
+        # important instruction in the whole install.
+        printf '%s\n' "$GATE_OUT" | grep -i "ACTION REQUIRED" -A1 | sed 's/^/  /'
+      else
+        no "gate install failed:"; printf '%s\n' "$GATE_OUT" | tail -5 | sed 's/^/    /'
+      fi
     fi
   else
     tip "not inside a git repository — skipped the per-project gate"
@@ -103,7 +108,8 @@ echo "  2. Install the LSP plugin for your language — this is what powers impa
 echo "       /plugin install typescript-lsp@claude-plugins-official"
 echo "     (or pyright / gopls / rust-analyzer / clangd / jdtls / csharp / php / swift / kotlin / lua)"
 echo "  3. In the agent, say:  onboard this project"
-echo "  4. Mark 'brain-verify' a REQUIRED status check in branch protection."
+echo "  4. Mark 'verify' a REQUIRED status check in branch protection."
+echo "     ('verify' is the job name; 'brain-verify' is the workflow and will not appear.)"
 echo "     Local hooks are bypassable (--no-verify, -n, core.hooksPath=). CI is the control."
 echo
 echo "Onboarding an existing codebase reads it once and writes .brain/. Expect a few"

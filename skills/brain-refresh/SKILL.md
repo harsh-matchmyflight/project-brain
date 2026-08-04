@@ -81,7 +81,9 @@ The brain must not grow without bound — that is how every context system in th
 - Remove entries for deleted modules.
 - Merge duplicated gotchas.
 - Delete anything that is now obvious from the code itself.
-- Re-check `CLAUDE.md` against its 150-line cap. If it is over, move material into `.claude/rules/` with `paths:` globs, where it costs nothing until relevant. Do not just delete it — relocate it.
+- Re-check `AGENTS.md` against its ~150-line cap (`CLAUDE.md` is a thin `@AGENTS.md` bridge and should stay a few lines). If it is over, move material into `.claude/rules/` with a `globs:` key, where it costs nothing until relevant. Do not just delete it — relocate it.
+
+  **Use `globs:`, never `paths:`.** The `paths:` key does not parse, and a rule written with it silently never loads — you get no error, just a rule that never fires.
 
 ## 6. Verify
 

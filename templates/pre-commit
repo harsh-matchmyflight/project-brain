@@ -6,7 +6,9 @@
 # Bash, perl, python, or any other interpreter. A git hook runs outside the
 # agent's tool loop and cannot be reasoned with.
 #
-# Install:  cp templates/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+# Install:  bash bin/install-gate.sh   (writes .githooks/ and sets core.hooksPath —
+#           do NOT copy into .git/hooks, which is not version-controlled and never
+#           survives a fresh clone)
 # Override: BRAIN_OVERRIDE=1 git commit ...
 set -uo pipefail
 
@@ -76,8 +78,18 @@ if [ "${DIFF_LINES:-0}" -gt "$BIG_DIFF_LINES" ]; then
   warn "[brain] $DIFF_LINES changed lines (threshold $BIG_DIFF_LINES). Check this is an implementation, not a rewrite."
 fi
 
-# --------------------------------------------- leftover debris (warn, not block)
-DEBRIS="$(git diff --cached -U0 | grep -E '^\+' | grep -nE '<<<<<<<|>>>>>>>|debugger;|binding\.pry' || true)"
+# ------------------------------------------------- leftover debris (BLOCKS)
+# Path exemptions mirror the CI check. Without them the gate blocks its own source:
+# this file, the CI workflow and the .brain/ docs all contain these patterns as
+# literals — in detection code, or in prose describing this exact problem.
+DEBRIS_PATHS=$(git diff --cached --name-only \
+  | grep -vE '^(templates/|\.githooks/|\.github/|\.brain/)' \
+  | grep -vE '\.md$' || true)
+if [ -n "$DEBRIS_PATHS" ]; then
+  DEBRIS="$(git diff --cached -U0 -- $DEBRIS_PATHS | grep -E '^\+' | grep -nE '<<<<<<<|>>>>>>>|debugger;|binding\.pry' || true)"
+else
+  DEBRIS=""
+fi
 if [ -n "$DEBRIS" ]; then
   red "[brain] BLOCKED — conflict markers or debugger statements in the staged diff."
   printf '%s\n' "$DEBRIS"

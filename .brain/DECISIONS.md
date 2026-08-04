@@ -1,7 +1,8 @@
 # DECISIONS
 
 Non-obvious choices, and the landmines. Every entry below was verified against the
-code on 2026-08-04 at commit 91fe6cf — none are inferred.
+code on 2026-08-04 — none are inferred. Fixed entries are retained deliberately:
+they explain why the code looks the way it does.
 
 ## Architectural choices
 
@@ -32,23 +33,27 @@ expanded into context at launch so they save nothing.
 
 ## Landmines — verified, not inferred
 
-### 🔴 `brain-refresh` tells you to write a rules key that silently never loads
+> ✅ = fixed. 🔴🟠🟡 = still open, severity descending.
+> Fixed entries are kept, not deleted: they record why the code looks the way it does.
+
+### ✅ FIXED (b1b126e+) — `brain-refresh` told you to write a rules key that never loads
 `skills/brain-onboard/SKILL.md:221` states plainly that the `paths:` frontmatter key
 "is known not to parse — a rule written that way silently never loads", and mandates
 `globs:`. But `skills/brain-refresh/SKILL.md:84` instructs moving material into
 `.claude/rules/` "with `paths:` globs".
 
-**An agent following brain-refresh produces a dead rule and gets no error.** This is the
-exact class of bug the project's own design notes list as a v1 schema error, reintroduced
-in prose. Highest-severity item in this file.
+An agent following brain-refresh produced a dead rule with no error — the exact class of
+bug the design notes list as a v1 schema error, reintroduced in prose.
+**Fixed:** brain-refresh now says `globs:` and states explicitly that `paths:` never loads.
 
-### 🔴 A selftest check that can never fail
+### ✅ FIXED — a selftest check that could never fail
 `bin/selftest.sh:47-48`:
 ```
 [ $? -ne 0 ] && ok "...handles bad input..." || ok "check-features.py ran"
 ```
-Both branches call `ok`. The check passes unconditionally regardless of behaviour.
-**The advertised count is therefore one higher than the number of real assertions.**
+Both branches called `ok`, so the assertion passed regardless of behaviour and the
+advertised count overstated the real one by one.
+**Fixed:** the failing branch now calls `bad`.
 
 ### 🔴 The gate does nothing in its default state
 `templates/pre-commit` enforces scope only when `.brain/plans/ACTIVE.scope` exists and is
@@ -56,29 +61,34 @@ non-empty. Absent or empty → warn only, no enforcement. That is the state of e
 that has not run `brain-plan`, i.e. the common case. The gate feels installed while
 enforcing nothing.
 
-### 🟠 Four files are duplicated with no drift check
+### ✅ FIXED — four files duplicated, now with a drift check
 `templates/{pre-commit,brain-verify.yml,check-features.py}` are copied to `.githooks/` and
 `.github/`; `pre-commit` is copied *twice* (`pre-commit` + `pre-merge-commit`). `selftest.sh`
-contains **zero** drift assertions. Editing a template without re-running `install-gate.sh`
-leaves the live gate on old logic. Verified in sync at 91fe6cf — by hand, not by tooling.
+had **zero** drift assertions, so editing a template without re-running `install-gate.sh`
+left the live gate on stale logic.
+**Fixed:** selftest now `cmp`s all four pairs. Negative-tested — desyncing a copy fails it.
 
-### 🟠 The CI status check is named `verify`, not `brain-verify`
+### ✅ FIXED (docs) — the CI status check is named `verify`, not `brain-verify`
 `templates/brain-verify.yml:1` sets `name: brain-verify` (the workflow); line 19 defines job
 `verify:`. **Branch protection matches the job name.** Every instruction in this repo —
 README, `install-gate.sh:55`, `install.sh` — tells the user to require "brain-verify",
-which does not appear in the branch-protection picker. Anyone following the docs fails
+which does not appear in the branch-protection picker, so anyone following the docs failed
 to enable the only real enforcement layer.
+**Fixed (docs only):** README, install-gate.sh, install.sh and brain-onboard now say `verify`.
+The job was *not* renamed — that would require re-pointing existing branch protection.
 
-### 🟠 The debris check matches its own source
+### ✅ FIXED — the debris check matched its own source
 `templates/pre-commit` and `templates/brain-verify.yml` contain `<<<<<<<` and `debugger;`
-as string literals in their detection code. The CI copy now excludes `':!templates'`;
-**the pre-commit copy has no path exemptions at all**, so committing an edit to
-`templates/` still requires `BRAIN_OVERRIDE=1`. Known, unfixed.
+as string literals in their detection code, and the `.brain/` docs describe those patterns
+in prose. The pre-commit copy had no path exemptions, so it blocked its own source and its
+own documentation.
+**Fixed:** pre-commit now exempts `templates/`, `.githooks/`, `.github/`, `.brain/` and
+`*.md`, mirroring the CI check.
 
-### 🟠 `install.sh` hides the one message that matters
+### ✅ FIXED — `install.sh` hid the one message that matters
 `install.sh` redirects `install-gate.sh` output to `/dev/null`, swallowing its
-"ACTION REQUIRED: make brain-verify a required status check" line. Only a generic note in
-the installer's own summary survives.
+"ACTION REQUIRED" line — the single most important instruction in the install.
+**Fixed:** output is captured and the ACTION REQUIRED lines are printed.
 
 ### 🟡 `install-gate.sh` creates `.brain/plans/` before onboarding exists
 Any `-d .brain` existence test therefore gives a false positive on a gated-but-not-onboarded
@@ -100,9 +110,10 @@ auditor has a "Gate integrity" check the skill lacks. No shared source.
 `templates/{INDEX.md.tpl,features.json.tpl,rule-example.md}` — their formats are duplicated
 inline in `brain-onboard`. `features.json.tpl` is touched only by `selftest.sh`.
 
-### 🟡 Stale comments contradict behaviour
+### ✅ FIXED — stale comments contradicted behaviour
 `templates/pre-commit:9` documents installing to `.git/hooks/pre-commit`, contradicting the
-`core.hooksPath` design. Line 79 comments the debris check "warn, not block"; it blocks.
+`core.hooksPath` design. Line 79 commented the debris check "warn, not block"; it blocks.
+**Fixed:** both corrected.
 
 ## Tooling
 
@@ -111,6 +122,6 @@ inline in `brain-onboard`. `features.json.tpl` is touched only by `selftest.sh`.
 - **Available:** `rg`, `ctags`, `jq`, `python3` (3.9.6, system), `gh`, `git`.
 - **Absent:** `ast-grep` — `brain-impact` and `brain-onboard` both prefer it and fall back
   to `rg`. Installing it would improve impact precision.
-- **`pyyaml` was installed manually** so `selftest.sh`'s YAML check can run. It is not
-  declared anywhere; a fresh machine fails that check with "invalid YAML (or pyyaml missing)",
-  which misreports a missing dependency as a broken file.
+- **`pyyaml` was installed manually** so `selftest.sh`'s YAML check can run. Still undeclared,
+  but the check now distinguishes "pyyaml not installed" from "invalid YAML" instead of
+  conflating them — that conflation cost real debugging time on first run.
