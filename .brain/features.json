@@ -34,7 +34,7 @@
       "area": "enforcement",
       "description": "The brain-verify workflow's 'verify' job passes on main",
       "verify": "gh run list --repo harsh-matchmyflight/project-brain --limit 1 --json conclusion -q '.[0].conclusion' | grep -q success",
-      "passes": false
+      "passes": true
     }
   ]
 }
