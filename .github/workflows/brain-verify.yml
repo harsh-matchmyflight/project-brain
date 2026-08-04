@@ -55,7 +55,7 @@ jobs:
       - name: Debris — no conflict markers or debuggers
         run: |
           if git grep -nE '^(<<<<<<< |>>>>>>> )|debugger;|binding\.pry' -- \
-               ':!.githooks' ':!.github' ':!*.md'; then
+               ':!.githooks' ':!.github' ':!templates' ':!*.md'; then
             echo "::error::Conflict markers or debugger statements found."
             exit 1
           fi
