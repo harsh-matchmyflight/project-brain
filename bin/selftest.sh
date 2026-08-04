@@ -17,6 +17,15 @@ for f in .claude-plugin/plugin.json .claude-plugin/marketplace.json hooks/hooks.
   python3 -c "import json;json.load(open('$ROOT/$f'))" 2>/dev/null && ok "$f" || bad "$f invalid JSON"
 done
 
+echo "== manifest schema =="
+if command -v claude >/dev/null 2>&1; then
+  claude plugin validate "$ROOT" >/dev/null 2>&1 \
+    && ok "plugin.json + marketplace.json accepted by claude plugin validate" \
+    || bad "claude plugin validate rejected the manifests (run it directly to see why)"
+else
+  bad "claude CLI not found — cannot validate manifests against the real schema"
+fi
+
 echo "== hooks.json shape =="
 python3 - "$ROOT/hooks/hooks.json" <<'PY' && ok "event-keyed object, string matcher, type=command" || bad "hooks.json shape wrong"
 import json,sys
