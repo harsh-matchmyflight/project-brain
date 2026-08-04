@@ -6,28 +6,28 @@
       "area": "verification",
       "description": "The full package selftest passes: JSON, manifest schema, hook shape, shell syntax, skill frontmatter, and a live gate test",
       "verify": "bash bin/selftest.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "gate-blocks-out-of-scope",
       "area": "enforcement",
       "description": "A staged file outside .brain/plans/ACTIVE.scope is rejected by the pre-commit hook",
       "verify": "bash bin/selftest.sh 2>&1 | grep -q 'PASS out-of-scope commit blocked'",
-      "passes": false
+      "passes": true
     },
     {
       "id": "manifests-valid",
       "area": "packaging",
       "description": "plugin.json and marketplace.json are accepted by the real Claude Code schema validator",
       "verify": "claude plugin validate .",
-      "passes": false
+      "passes": true
     },
     {
       "id": "oneline-install",
       "area": "packaging",
       "description": "install.sh installs the gate into a fresh git repo and sets core.hooksPath",
       "verify": "T=$(mktemp -d) && cd $T && git init -q . && bash $OLDPWD/install.sh --skip-plugin >/dev/null 2>&1 && [ \"$(git config core.hooksPath)\" = .githooks ]",
-      "passes": false
+      "passes": true
     },
     {
       "id": "ci-verify-green",
