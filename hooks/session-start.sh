@@ -6,8 +6,11 @@ set -uo pipefail
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 BRAIN="$ROOT/.brain"
 
-if [ ! -d "$BRAIN" ]; then
-  echo "[brain] No .brain/ in this repo. If the user asks for structural work, offer to run brain-onboard first."
+# Test INDEX.md, not the directory: install-gate.sh creates .brain/plans/ before
+# onboarding ever runs, so a -d test passes on every freshly gated repo and points
+# the agent at an INDEX that does not exist yet.
+if [ ! -f "$BRAIN/INDEX.md" ]; then
+  echo "[brain] No .brain/INDEX.md in this repo. If the user asks for structural work, offer to run brain-onboard first."
   exit 0
 fi
 
