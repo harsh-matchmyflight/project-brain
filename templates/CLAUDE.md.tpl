@@ -20,6 +20,7 @@
 - Use `brain-impact` before editing anything shared. It uses the LSP tool for find-references when a language plugin is installed.
 - Delegate wide exploration to the `scout` subagent so findings come back instead of file dumps.
 - Delegate high-stakes diff review to the `auditor` subagent.
+- Run `brain-learn` the moment the brain is wrong — an index miss, a missed call site, a coupling nothing warned about. Two lines, immediately; sessions end before `brain-refresh` runs.
 - Run `brain-refresh` at the end of any task that changed structure.
 
 ## Language intelligence

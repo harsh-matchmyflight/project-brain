@@ -166,6 +166,8 @@ Mark every uncertain claim `[assumed]`. Then **ask the user to correct the assum
 
 `GLOSSARY.md`: project vocabulary, internal shorthand, acronyms, service codenames, table nicknames. So that later, when the user says something in shorthand, you resolve it instead of asking.
 
+`LESSONS.md`: copy `templates/LESSONS.md.tpl` verbatim, counters at 0. It stays empty until the brain is first wrong about something — which it will be, because the first index is written by a session that has never used it.
+
 ## Step 8 — Write `.brain/features.json`
 
 ```json
