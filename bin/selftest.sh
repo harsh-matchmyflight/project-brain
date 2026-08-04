@@ -48,7 +48,7 @@ python3 "$ROOT/templates/check-features.py" /dev/null /dev/null >/dev/null 2>&1
 [ $? -ne 0 ] && ok "check-features.py handles bad input without crashing hard" || ok "check-features.py ran"
 
 echo "== shell syntax =="
-for f in hooks/*.sh bin/*.sh templates/pre-commit; do
+for f in hooks/*.sh bin/*.sh install.sh templates/pre-commit; do
   bash -n "$ROOT/$f" 2>/dev/null && ok "$f" || bad "$f syntax error"
 done
 
