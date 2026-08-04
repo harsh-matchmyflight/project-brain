@@ -1,0 +1,88 @@
+name: brain-verify
+
+# The gate that actually holds.
+#
+# Local git hooks are bypassable (--no-verify, -n, -c core.hooksPath=, SKIP=),
+# are never installed by a fresh clone, do not fire on rebase or cherry-pick,
+# and cannot exist at all for commits created through a hosting API or a web-UI
+# squash merge. A required status check survives every one of those.
+#
+# ACTION REQUIRED after installing: mark this workflow as a required status
+# check in branch protection / rulesets. Without that, it only advises.
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scope — changed files must be in the active plan
+        if: github.event_name == 'pull_request'
+        run: |
+          SCOPE=".brain/plans/ACTIVE.scope"
+          if [ ! -s "$SCOPE" ]; then
+            echo "::notice::No active plan; scope not enforced for this PR."
+            exit 0
+          fi
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          OUT=""
+          while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            case "$f" in .brain/*|.githooks/*|.github/*) continue ;; esac
+            m=0
+            while IFS= read -r p; do
+              case "$p" in ''|'#'*) continue ;; esac
+              # shellcheck disable=SC2254
+              case "$f" in $p) m=1; break ;; esac
+            done < "$SCOPE"
+            [ "$m" -eq 1 ] || OUT="$OUT  $f"$'\n'
+          done < <(git diff --name-only "$BASE".."$HEAD")
+          if [ -n "$OUT" ]; then
+            echo "::error::Files changed outside the active plan's scope:"
+            printf '%s' "$OUT"
+            exit 1
+          fi
+          echo "Scope OK."
+
+      - name: Debris — no conflict markers or debuggers
+        run: |
+          if git grep -nE '^(<<<<<<< |>>>>>>> )|debugger;|binding\.pry' -- \
+               ':!.githooks' ':!.github' ':!*.md'; then
+            echo "::error::Conflict markers or debugger statements found."
+            exit 1
+          fi
+          echo "Clean."
+
+      - name: Brain integrity
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          fail=0
+          [ -f .brain/INDEX.md ] || { echo "::error::.brain/INDEX.md missing"; fail=1; }
+          if [ -f .brain/features.json ]; then
+            python3 -c "import json;json.load(open('.brain/features.json'))" \
+              || { echo "::error::features.json is not valid JSON"; fail=1; }
+          fi
+          # A features entry may only move false -> true, and may never be deleted.
+          if [ -n "${BASE_SHA:-}" ] && [ -f .brain/features.json ]; then
+            git show "$BASE_SHA:.brain/features.json" > /tmp/base.json 2>/dev/null || true
+            if [ -s /tmp/base.json ]; then
+              python3 "$GITHUB_WORKSPACE/.github/scripts/check-features.py" /tmp/base.json .brain/features.json || fail=1
+            fi
+          fi
+          exit $fail
+
+      # Replace with this project's real commands. These are the same commands
+      # the plan's Verification section names — keep them identical.
+      # - name: Test
+      #   run: npm ci && npm test
+      # - name: Build
+      #   run: npm run build
