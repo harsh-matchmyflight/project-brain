@@ -1,0 +1,18 @@
+{
+  "name": "project-brain-marketplace",
+  "owner": {
+    "name": "Harsh Sharma"
+  },
+  "plugins": [
+    {
+      "name": "project-brain",
+      "description": "Persistent project brain: committed structure index, PRD and architecture map, blast-radius impact analysis before edits, scope-locked plans, and layered git + CI enforcement.",
+      "source": {
+        "github": {
+          "repo": "harsh-matchmyflight/project-brain",
+          "ref": "main"
+        }
+      }
+    }
+  ]
+}

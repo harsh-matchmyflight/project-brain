@@ -1,0 +1,18 @@
+{
+  "name": "project-brain",
+  "version": "2.0.0",
+  "description": "A persistent project brain: committed structure index, reverse-engineered PRD and architecture map, blast-radius impact analysis before every edit, scope-locked plans, and layered enforcement at git and CI. Index-first navigation instead of re-reading the codebase every session.",
+  "author": {
+    "name": "Harsh Sharma"
+  },
+  "license": "MIT",
+  "keywords": [
+    "codebase-index",
+    "impact-analysis",
+    "minimal-diff",
+    "architecture",
+    "prd",
+    "scope-control",
+    "agents-md"
+  ]
+}

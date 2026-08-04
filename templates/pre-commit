@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# project-brain scope gate.
+#
+# This is the ONLY real enforcement layer in the system. PreToolUse hooks are
+# documented as bypassable — an agent blocked from Edit can route around it via
+# Bash, perl, python, or any other interpreter. A git hook runs outside the
+# agent's tool loop and cannot be reasoned with.
+#
+# Install:  cp templates/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+# Override: BRAIN_OVERRIDE=1 git commit ...
+set -uo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+SCOPE="$ROOT/.brain/plans/ACTIVE.scope"
+BIG_DIFF_LINES="${BRAIN_MAX_DIFF_LINES:-600}"
+BIG_FILE_COUNT="${BRAIN_MAX_FILES:-25}"
+
+red()  { printf '\033[31m%s\033[0m\n' "$*"; }
+warn() { printf '\033[33m%s\033[0m\n' "$*"; }
+
+if [ "${BRAIN_OVERRIDE:-0}" = "1" ]; then
+  warn "[brain] scope gate overridden by BRAIN_OVERRIDE=1"
+  exit 0
+fi
+
+STAGED="$(git diff --cached --name-only --diff-filter=ACMR)"
+[ -n "$STAGED" ] || exit 0
+
+FAILED=0
+
+# ---------------------------------------------------------------- scope check
+if [ -s "$SCOPE" ]; then
+  PLAN_NAME="$(head -1 "$SCOPE" | sed 's/^# plan: //')"
+  OUT_OF_SCOPE=""
+
+  while IFS= read -r file; do
+    [ -n "$file" ] || continue
+    # .brain/ bookkeeping and the plan itself are always allowed.
+    case "$file" in .brain/*) continue ;; esac
+
+    matched=0
+    while IFS= read -r pattern; do
+      case "$pattern" in ''|'#'*) continue ;; esac
+      # shellcheck disable=SC2254
+      case "$file" in $pattern) matched=1; break ;; esac
+    done < "$SCOPE"
+
+    [ "$matched" -eq 1 ] || OUT_OF_SCOPE="$OUT_OF_SCOPE  $file"$'\n'
+  done <<< "$STAGED"
+
+  if [ -n "$OUT_OF_SCOPE" ]; then
+    red "[brain] BLOCKED — files staged outside the active plan's scope."
+    echo  "        Active plan: ${PLAN_NAME:-unnamed}"
+    echo  "        Allowlist:   .brain/plans/ACTIVE.scope"
+    echo
+    echo  "Out of scope:"
+    printf '%s' "$OUT_OF_SCOPE"
+    echo
+    echo  "If these changes belong in this task, add them to the plan's file table"
+    echo  "and to ACTIVE.scope — deliberately, not reflexively. Otherwise unstage them."
+    echo  "To bypass once: BRAIN_OVERRIDE=1 git commit ..."
+    FAILED=1
+  fi
+else
+  warn "[brain] No active plan (.brain/plans/ACTIVE.scope). Scope not enforced for this commit."
+fi
+
+# ------------------------------------------------------- size tripwires (warn)
+FILE_COUNT="$(printf '%s\n' "$STAGED" | grep -c . || true)"
+DIFF_LINES="$(git diff --cached --numstat | awk '{a+=$1; d+=$2} END {print a+d+0}')"
+
+if [ "${FILE_COUNT:-0}" -gt "$BIG_FILE_COUNT" ]; then
+  warn "[brain] $FILE_COUNT files in one commit (threshold $BIG_FILE_COUNT). Large commits hide regressions — consider splitting."
+fi
+if [ "${DIFF_LINES:-0}" -gt "$BIG_DIFF_LINES" ]; then
+  warn "[brain] $DIFF_LINES changed lines (threshold $BIG_DIFF_LINES). Check this is an implementation, not a rewrite."
+fi
+
+# --------------------------------------------- leftover debris (warn, not block)
+DEBRIS="$(git diff --cached -U0 | grep -E '^\+' | grep -nE '<<<<<<<|>>>>>>>|debugger;|binding\.pry' || true)"
+if [ -n "$DEBRIS" ]; then
+  red "[brain] BLOCKED — conflict markers or debugger statements in the staged diff."
+  printf '%s\n' "$DEBRIS"
+  FAILED=1
+fi
+
+# ---------------------------------------------------------- index freshness
+if [ -f "$ROOT/.brain/INDEX.md" ]; then
+  STRUCTURAL="$(printf '%s\n' "$STAGED" | grep -cE '(^|/)(index|main|app|routes?|schema)\.|migrations?/' || true)"
+  if [ "${STRUCTURAL:-0}" -gt 0 ] && ! printf '%s\n' "$STAGED" | grep -q '^\.brain/INDEX\.md$'; then
+    warn "[brain] Structural files changed but .brain/INDEX.md was not updated. Run brain-refresh."
+  fi
+fi
+
+exit "$FAILED"
